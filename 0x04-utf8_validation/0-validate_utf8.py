@@ -14,28 +14,32 @@ def validUTF8(data):
     Returns:
         True if data is a valid UTF-8 encoding, False otherwise.
     """
+    remaining_bytes = 0
 
-    num_bytes_remaining = 0
-    index = 0
-
-    while index < len(data):
-        first_byte = data[index]
-
-        if num_bytes_remaining == 0:
-            if (first_byte >> 7) == 0:
-                num_bytes_remaining = 0
-            elif (first_byte >> 5) == 0b110:
-                num_bytes_remaining = 1
-            elif (first_byte >> 4) == 0b1110:
-                num_bytes_remaining = 2
-            elif (first_byte >> 3) == 0b11110:
-                num_bytes_remaining = 3
+    for byte in data:
+        # Check if the byte is a continuation byte
+        if remaining_bytes > 0:
+            # Check if the current byte starts with '10'
+            if (byte & 0b11000000) == 0b10000000:
+                remaining_bytes -= 1
             else:
                 return False
         else:
-            if (first_byte >> 6) != 0b10:
+            # Checks number of leading '1' bits to determine the len of char
+            if (byte & 0b10000000) == 0:
+                # 1-byte character
+                remaining_bytes = 0
+            elif (byte & 0b11100000) == 0b11000000:
+                # 2-byte character
+                remaining_bytes = 1
+            elif (byte & 0b11110000) == 0b11100000:
+                # 3-byte character
+                remaining_bytes = 2
+            elif (byte & 0b11111000) == 0b11110000:
+                # 4-byte character
+                remaining_bytes = 3
+            else:
                 return False
-            num_bytes_remaining -= 1
 
-        index += 1
-    return num_bytes_remaining == 0
+    # Check if all characters have been fully processed
+    return remaining_bytes == 0
